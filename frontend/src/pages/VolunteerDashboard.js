@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { volunteerApi, analyticsApi, utilityApi } from '../services/api';
 import { Button } from '../components/ui/button';
@@ -25,21 +25,28 @@ export const VolunteerDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [availableDeliveries, setAvailableDeliveries] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
   const [ngos, setNgos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
 
+  // Calculate stats based on actual deliveries
+  const { totalDeliveries, score, badgesCount } = useMemo(() => {
+    const completed = deliveries.filter(d => ['delivered', 'confirmed'].includes(d.status)).length;
+    return {
+      totalDeliveries: completed,
+      score: completed * 1.0,
+      badgesCount: Math.floor(completed / 5)
+    };
+  }, [deliveries]);
+
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, anaRes, ngosRes] = await Promise.all([
+      const [profileRes, ngosRes] = await Promise.all([
         volunteerApi.getProfile(),
-        analyticsApi.getUser(),
         utilityApi.getVerifiedNGOs(),
       ]);
       
       setProfile(profileRes.data);
-      setAnalytics(anaRes.data);
       setNgos(ngosRes.data || []);
       
       // Only fetch deliveries if verified
@@ -203,6 +210,8 @@ export const VolunteerDashboard = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
+          
+          {/* Deliveries */}
           <Card className="border-stone-200" data-testid="stat-deliveries">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -210,12 +219,14 @@ export const VolunteerDashboard = () => {
                   <Truck className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{analytics?.total_deliveries || 0}</p>
+                  <p className="text-2xl font-bold">{totalDeliveries}</p>
                   <p className="text-sm text-muted-foreground">Deliveries</p>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Score */}
           <Card className="border-stone-200" data-testid="stat-score">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -223,12 +234,14 @@ export const VolunteerDashboard = () => {
                   <Star className="h-5 w-5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{(analytics?.performance_score || 5.0).toFixed(1)}</p>
+                  <p className="text-2xl font-bold">{score.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground">Score</p>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Badges */}
           <Card className="border-stone-200" data-testid="stat-badges">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -236,12 +249,13 @@ export const VolunteerDashboard = () => {
                   <Award className="h-5 w-5 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{(analytics?.badges || []).length}</p>
+                  <p className="text-2xl font-bold">{badgesCount}</p>
                   <p className="text-sm text-muted-foreground">Badges</p>
                 </div>
               </div>
             </CardContent>
           </Card>
+
         </div>
 
         {/* Active Deliveries */}
