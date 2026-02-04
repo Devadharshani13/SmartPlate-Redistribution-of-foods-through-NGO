@@ -20,10 +20,7 @@ import {
   AlertTriangle,
   Package,
   TrendingUp,
-  Brain,
-  MapPin,
-  Leaf,
-  Drumstick
+  Brain
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,7 +32,6 @@ export const AdminDashboard = () => {
   const [allDeliveries, setAllDeliveries] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [calculatingScore, setCalculatingScore] = useState(null);
   const [reviewDialog, setReviewDialog] = useState({ open: false, type: '', id: '', action: '' });
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -98,37 +94,13 @@ export const AdminDashboard = () => {
   };
 
   const handleCalculateUrgency = async (requestId) => {
-    setCalculatingScore(requestId);
     try {
       const response = await adminApi.calculateUrgencyScore(requestId);
-      const score = response.data.urgency_score;
-      toast.success(`AI Urgency Score Calculated: ${score.toFixed(1)}/10`, {
-        description: 'The score has been updated for this request'
-      });
-      
-      // Update the local state immediately
-      setAllRequests(prev => prev.map(req => 
-        req.id === requestId 
-          ? { ...req, ai_urgency_score: score }
-          : req
-      ));
+      toast.success(`AI Urgency Score: ${response.data.urgency_score.toFixed(1)}/10`);
+      fetchData();
     } catch (error) {
-      console.error('Error calculating urgency:', error);
-      toast.error(error.response?.data?.detail || 'Failed to calculate urgency score');
-    } finally {
-      setCalculatingScore(null);
+      toast.error(error.response?.data?.detail || 'Failed to calculate urgency');
     }
-  };
-
-  const getCategoryIcon = (category) => {
-    if (category === 'veg') {
-      return <Leaf className="h-3 w-3 text-green-600" />;
-    } else if (category === 'non-veg') {
-      return <Drumstick className="h-3 w-3 text-red-600" />;
-    } else if (category === 'vegan') {
-      return <Leaf className="h-3 w-3 text-emerald-600" />;
-    }
-    return null;
   };
 
   if (loading) {
@@ -392,84 +364,43 @@ export const AdminDashboard = () => {
                     {allRequests.map((request) => (
                       <div 
                         key={request.id} 
-                        className="p-4 rounded-xl border border-stone-200 hover:bg-secondary/30 smooth-transition"
+                        className="p-4 rounded-xl border border-stone-200"
                         data-testid={`request-${request.id}`}
                       >
-                        <div className="space-y-3">
-                          {/* Header with name and badges */}
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Building2 className="h-4 w-4 text-primary" />
-                            <h4 className="font-semibold">{request.ngo_name}</h4>
-                            <Badge className={
-                              request.status === 'approved' || request.status === 'active' 
-                                ? 'bg-success text-success-foreground' 
-                                : request.status === 'pending' 
-                                  ? 'bg-warning text-warning-foreground'
-                                  : request.status === 'fulfilled'
-                                    ? 'bg-primary text-primary-foreground'
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">{request.ngo_name}</h4>
+                              <Badge className={
+                                request.status === 'approved' || request.status === 'active' 
+                                  ? 'bg-success text-success-foreground' 
+                                  : request.status === 'pending' 
+                                    ? 'bg-warning text-warning-foreground'
                                     : 'bg-secondary text-secondary-foreground'
-                            }>
-                              {request.status}
-                            </Badge>
-                            <Badge className={
-                              request.urgency_level === 'critical' ? 'bg-destructive text-destructive-foreground' :
-                              request.urgency_level === 'high' ? 'bg-accent text-accent-foreground' :
-                              'bg-warning text-warning-foreground'
-                            }>
-                              {request.urgency_level === 'critical' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                              {request.urgency_level}
-                            </Badge>
-                            {request.food_category && (
-                              <Badge variant="outline" className="flex items-center gap-1">
-                                {getCategoryIcon(request.food_category)}
-                                <span className="capitalize">{request.food_category}</span>
+                              }>
+                                {request.status}
                               </Badge>
-                            )}
+                              {request.ai_urgency_score && (
+                                <Badge className="bg-primary/10 text-primary">
+                                  AI Score: {request.ai_urgency_score.toFixed(1)}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {request.food_type} • {request.quantity} servings • {request.urgency_level} urgency
+                            </p>
+                            <p className="text-sm text-muted-foreground">{request.address}</p>
                           </div>
-
-                          {/* Request details */}
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Package className="h-3 w-3" />
-                              {request.food_type} • {request.quantity} servings
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {request.address}
-                            </span>
-                          </div>
-
-                          {/* AI Score Display */}
-                          <div className="flex items-center gap-3">
-                            {request.ai_urgency_score ? (
-                              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-200">
-                                <Brain className="h-4 w-4 text-purple-600" />
-                                <span className="text-sm font-semibold text-purple-700">
-                                  AI Score: {request.ai_urgency_score.toFixed(1)}/10
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg">
-                                <Brain className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">
-                                  No AI score yet
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Action buttons */}
-                          <div className="flex gap-2 pt-2">
+                          <div className="flex gap-2">
                             <Button 
                               variant="outline" 
                               size="sm"
                               className="rounded-full"
                               onClick={() => handleCalculateUrgency(request.id)}
-                              disabled={calculatingScore === request.id}
                               data-testid={`ai-score-${request.id}`}
                             >
                               <Brain className="h-4 w-4 mr-2" />
-                              {calculatingScore === request.id ? 'Calculating...' : 'Calculate AI Score'}
+                              AI Score
                             </Button>
                             {request.status === 'pending' && (
                               <Button 
