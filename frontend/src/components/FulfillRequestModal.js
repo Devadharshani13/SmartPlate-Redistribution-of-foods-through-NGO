@@ -15,7 +15,12 @@ import {
   Check,
   Truck,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Store,
+  Building,
+  Users,
+  Home,
+  Utensils
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +28,7 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
+    donor_type: '',
     quantity: request?.quantity - (request?.fulfilled_quantity || 0) || '',
     food_condition: '',
     availability_time: '',
@@ -90,7 +96,7 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
     e.preventDefault();
     
     // Validation
-    if (!formData.quantity || !formData.food_condition || 
+    if (!formData.donor_type || !formData.quantity || !formData.food_condition || 
         !formData.availability_time || !formData.delivery_method) {
       toast.error('Please fill in all required fields');
       return;
@@ -105,6 +111,7 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
     try {
       const submitData = {
         request_id: request.id,
+        donor_type: formData.donor_type,
         quantity: parseInt(formData.quantity),
         food_condition: formData.food_condition,
         availability_time: new Date(formData.availability_time).toISOString(),
@@ -127,6 +134,7 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
         
         // Reset form
         setFormData({
+          donor_type: '',
           quantity: '',
           food_condition: '',
           availability_time: '',
@@ -230,6 +238,50 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="donor_type">Donor Type *</Label>
+            <Select 
+              value={formData.donor_type} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, donor_type: value }))}
+            >
+              <SelectTrigger data-testid="donor-type-select">
+                <SelectValue placeholder="Select your donor type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="restaurant">
+                  <span className="flex items-center gap-2">
+                    <Utensils className="h-4 w-4" />
+                    Restaurants & Cafés
+                  </span>
+                </SelectItem>
+                <SelectItem value="hotel">
+                  <span className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Hotels & Catering Services
+                  </span>
+                </SelectItem>
+                <SelectItem value="event">
+                  <span className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Marriage Halls & Event Organizers
+                  </span>
+                </SelectItem>
+                <SelectItem value="corporate">
+                  <span className="flex items-center gap-2">
+                    <Store className="h-4 w-4" />
+                    Corporate Offices & College Canteens
+                  </span>
+                </SelectItem>
+                <SelectItem value="individual">
+                  <span className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Households / Individuals
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="quantity">Quantity to Donate *</Label>
             <Input
