@@ -14,12 +14,14 @@ import {
   Upload,
   Check,
   Truck,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, userLocation }) => {
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
     quantity: request?.quantity - (request?.fulfilled_quantity || 0) || '',
     food_condition: '',
@@ -59,6 +61,7 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
       
       toast.success('Photo uploaded!');
     } catch (error) {
+      console.error('Photo upload error:', error);
       toast.error('Failed to upload photo');
     }
   };
@@ -78,12 +81,15 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
         },
         () => toast.error('Could not get your location')
       );
+    } else {
+      toast.error('Geolocation is not supported by your browser');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validation
     if (!formData.quantity || !formData.food_condition || 
         !formData.availability_time || !formData.delivery_method) {
       toast.error('Please fill in all required fields');
@@ -107,22 +113,47 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
         geo_tag: formData.geo_tag,
       };
       
-      await donorApi.createFulfillment(submitData);
-      toast.success('Thank you for your donation!');
-      onSuccess();
+      const response = await donorApi.createFulfillment(submitData);
       
-      // Reset form
-      setFormData({
-        quantity: '',
-        food_condition: '',
-        availability_time: '',
-        delivery_method: '',
-        food_photo: null,
-        geo_tag: null,
-      });
-      setPhotoPreview(null);
+      // Success handling
+      setSuccess(true);
+      toast.success('Donation submitted successfully! Thank you for your generosity!');
+      
+      // Wait to show success state, then callback
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+        onOpenChange(false);
+        setSuccess(false);
+        
+        // Reset form
+        setFormData({
+          quantity: '',
+          food_condition: '',
+          availability_time: '',
+          delivery_method: '',
+          food_photo: null,
+          geo_tag: null,
+        });
+        setPhotoPreview(null);
+      }, 1500);
+      
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to submit fulfillment');
+      console.error('Fulfillment submission error:', error);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to submit fulfillment';
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        errorMessage = 'Authentication required. Please log in again.';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -131,6 +162,32 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
   if (!request) return null;
 
   const remainingQuantity = request.quantity - (request.fulfilled_quantity || 0);
+
+  // Success screen
+  if (success) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <div className="text-center py-8 space-y-4">
+            <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="h-10 w-10 text-success" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Donation Submitted Successfully!</h3>
+              <p className="text-muted-foreground">
+                Thank you for your generous donation to {request.ngo_name}. 
+                The admin will review and approve your fulfillment soon.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-success">
+              <Heart className="h-5 w-5 fill-current" />
+              <span className="font-medium">Making a difference!</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -331,6 +388,7 @@ export const FulfillRequestModal = ({ request, open, onOpenChange, onSuccess, us
               variant="outline" 
               onClick={() => onOpenChange(false)}
               className="rounded-full"
+              disabled={loading}
             >
               Cancel
             </Button>
