@@ -1,5 +1,6 @@
 # 🍽️ SmartPlate – Intelligent Food Redistribution Platform  
 ### *Reducing Food Waste • Fighting Hunger • Empowering Communities*
+![image_alt](https://github.com/Devadharshani13/SmartPlate-Redistribution-of-foods-through-NGO/blob/main/screenshot/home%20page.png?raw=true)
 
 ---
 
@@ -226,9 +227,7 @@ SmartPlate tracks real-time metrics:
 This project is developed for educational, social impact, and hackathon purposes.
 
 ---
-
 ### ⭐ “From surplus to sustenance — one plate at a time.”
-
 ```
 
 
